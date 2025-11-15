@@ -69,29 +69,59 @@ module shift_reg  #(parameter MSB) (  input d,                      // Declare i
       end
 endmodule
 
+//module ssdec(
+    //output logic [6:0] out,
+    //input logic [3:0] in,
+   // input logic enable
+//);
+
+//logic [6:0] temp;
+//assign temp = (in == 4'h0) ? 7'b0111111:
+                //(in == 4'h1) ? 7'b0000110:
+                //(in == 4'h2) ? 7'b1011011:
+                //(in == 4'h3) ? 7'b1001111:
+                //(in == 4'h4) ? 7'b1100110:
+                //(in == 4'h5) ? 7'b1101101:
+                //(in == 4'h6) ? 7'b1111101:
+                //(in == 4'h7) ? 7'b0000111:
+                //(in == 4'h8) ? 7'b1111111:
+                //(in == 4'h9) ? 7'b1101111:
+                //(in == 4'hA) ? 7'b1110111:
+                //(in == 4'hB) ? 7'b1111100:
+                //(in == 4'hC) ? 7'b0111001:
+                //(in == 4'hD) ? 7'b1011110:
+                //(in == 4'hE) ? 7'b1111001:
+                //(in == 4'hF) ? 7'b1110001: 7'b0000000;  
+
+//assign out = enable ? temp: 7'b000000;
+//endmodule
+
 module ssdec(
-    output logic [6:0] out,
-    input logic [3:0] in,
-    input logic enable
+  input logic [3:0]in,
+  input logic enable,
+  output logic [6:0]out
 );
 
-logic [6:0] temp;
-assign temp = (in == 4'h0) ? 7'b0111111:
-                (in == 4'h1) ? 7'b0000110:
-                (in == 4'h2) ? 7'b1011011:
-                (in == 4'h3) ? 7'b1001111:
-                (in == 4'h4) ? 7'b1100110:
-                (in == 4'h5) ? 7'b1101101:
-                (in == 4'h6) ? 7'b1111101:
-                (in == 4'h7) ? 7'b0000111:
-                (in == 4'h8) ? 7'b1111111:
-                (in == 4'h9) ? 7'b1101111:
-                (in == 4'hA) ? 7'b1110111:
-                (in == 4'hB) ? 7'b1111100:
-                (in == 4'hC) ? 7'b0111001:
-                (in == 4'hD) ? 7'b1011110:
-                (in == 4'hE) ? 7'b1111001:
-                (in == 4'hF) ? 7'b1110001: 7'b0000000;  
+logic [6:0] SEG7 [15:0];
 
-assign out = enable ? temp: 7'b000000;
+assign SEG7[4'h0] = 7'b0111111;
+assign SEG7[4'h1] = 7'b0000110;
+assign SEG7[4'h2] = 7'b1011011;
+assign SEG7[4'h3] = 7'b1001111;
+assign SEG7[4'h4] = 7'b1100110;
+assign SEG7[4'h5] = 7'b1101101;
+assign SEG7[4'h6] = 7'b1111101;
+assign SEG7[4'h7] = 7'b0000111;
+assign SEG7[4'h8] = 7'b1111111;
+assign SEG7[4'h9] = 7'b1100111;
+assign SEG7[4'ha] = 7'b1110111;
+assign SEG7[4'hb] = 7'b1111100;
+assign SEG7[4'hc] = 7'b0111001;
+assign SEG7[4'hd] = 7'b1011110;
+assign SEG7[4'he] = 7'b1111001;
+assign SEG7[4'hf] = 7'b1110001;
+
+assign out[6:0] = enable ? SEG7[in] : 7'b0000000;
+
+
 endmodule
