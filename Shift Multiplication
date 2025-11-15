@@ -1,0 +1,13 @@
+ always_comb begin
+        product = 16'b0;
+
+        a_shift = {4'b0000, A[3:0]};
+        b_shift = B[3:0];
+
+        for (i = 0; i < 4; i = i + 1) begin
+            if (b_shift[0])
+                product = product + {8'b0, a_shift};
+            a_shift = a_shift << 1;
+            b_shift = b_shift >> 1;
+        end
+    end
