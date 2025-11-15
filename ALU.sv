@@ -26,13 +26,13 @@ module top (
     pb0_prev <= pb[0];
   end
   assign pulse_0 = (pb0_prev == 0) && (pb[0] == 1);
-
+ 
   logic pb1_prev;
   logic pulse_1;
 
   always_ff @(posedge hz100 or negedge reset) begin
     if (!reset)
-    pb0_prev <= 0; 
+    pb1_prev <= 0; 
     else 
     pb1_prev <= pb[1];
   end
@@ -45,7 +45,20 @@ module top (
   assign shift_data   = pulse_1;
   
   shift_reg #(.MSB(8)) in (.clk(hz100), .rstn(reset), .en(shift_enable), .d(shift_data), .dir(pb[2]), .out(left));
+  
+  // Connects LOW 4 bits (left[3:0]) to display ss0
+  ssdec decoder_for_ss0 (
+      .out(ss0),        // Connect the 7-bit output to the 'ss0' display port
+      .in(left[3:0]),   // Connect the 4-bit input to the LOW 4 bits of 'left'
+      .enable(1'b1)     // Turn the display on
+  );
 
+  // Connects HIGH 4 bits (left[7:4]) to display ss1
+  ssdec decoder_for_ss1 (
+      .out(ss1),        // Connect the 7-bit output to the 'ss1' display port
+      .in(left[7:4]),   // Connect the 4-bit input to the HIGH 4 bits of 'left'
+      .enable(1'b1)     // Turn the display on
+      ); 
 endmodule
 
 module shift_reg  #(parameter MSB) (  input d,                      // Declare input for data to the first flop in the shift register
@@ -68,33 +81,6 @@ module shift_reg  #(parameter MSB) (  input d,                      // Declare i
             out <= out;
       end
 endmodule
-
-//module ssdec(
-    //output logic [6:0] out,
-    //input logic [3:0] in,
-   // input logic enable
-//);
-
-//logic [6:0] temp;
-//assign temp = (in == 4'h0) ? 7'b0111111:
-                //(in == 4'h1) ? 7'b0000110:
-                //(in == 4'h2) ? 7'b1011011:
-                //(in == 4'h3) ? 7'b1001111:
-                //(in == 4'h4) ? 7'b1100110:
-                //(in == 4'h5) ? 7'b1101101:
-                //(in == 4'h6) ? 7'b1111101:
-                //(in == 4'h7) ? 7'b0000111:
-                //(in == 4'h8) ? 7'b1111111:
-                //(in == 4'h9) ? 7'b1101111:
-                //(in == 4'hA) ? 7'b1110111:
-                //(in == 4'hB) ? 7'b1111100:
-                //(in == 4'hC) ? 7'b0111001:
-                //(in == 4'hD) ? 7'b1011110:
-                //(in == 4'hE) ? 7'b1111001:
-                //(in == 4'hF) ? 7'b1110001: 7'b0000000;  
-
-//assign out = enable ? temp: 7'b000000;
-//endmodule
 
 module ssdec(
   input logic [3:0]in,
