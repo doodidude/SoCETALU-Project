@@ -1,13 +1,13 @@
 module button_input (
-    input  logic        clk,
-    input  logic        rst_n,
+    input  logic clk,
+    input  logic rst_n,
     input  logic [9:0]  pb,        
     output logic [13:0] number     
 );
     logic [9:0] pb_prev;           
     logic [9:0] pb_pressed;        
     logic [3:0] digit;             
-    int digit_count;      
+    logic digit_count;      
     
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n)
