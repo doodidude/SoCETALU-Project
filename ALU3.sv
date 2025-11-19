@@ -27,9 +27,9 @@ always_ff @(posedge hz100 or posedge pb[19]) begin
         valueA <= 0;
         valueB <= 0;
     end else begin
-        if (pulse_0)
+        if (pb[10])
             valueA <= shift_reg_out;   // save current shift reg to A
-        if (pulse_1)
+        if (pb[11])
             valueB <= shift_reg_out;   // save current shift reg to B
     end
 end
@@ -87,7 +87,31 @@ end
       .in(shift_reg_out[7:4]),   // Connect the 4-bit input to the HIGH 4 bits of 'left'
       .enable(1'b1)     // Turn the display on
       ); 
-
+  
+  
+  ssdec decoder_for_ss6 (
+      .out(ss6),        // Connect the 7-bit output to the 'ss0' display port
+      .in(valueA[3:0]),   // Connect the 4-bit input to the LOW 4 bits of 'left'
+      .enable(1'b1)     // Turn the display on
+  );
+  
+  ssdec decoder_for_ss7 (
+      .out(ss7),        // Connect the 7-bit output to the 'ss1' display port
+      .in(valueA[7:4]),   // Connect the 4-bit input to the HIGH 4 bits of 'left'
+      .enable(1'b1)     // Turn the display on
+      ); 
+      
+      ssdec decoder_for_ss4 (
+      .out(ss4),        // Connect the 7-bit output to the 'ss0' display port
+      .in(valueB[3:0]),   // Connect the 4-bit input to the LOW 4 bits of 'left'
+      .enable(1'b1)     // Turn the display on
+  );
+  
+  ssdec decoder_for_ss5 (
+      .out(ss5),        // Connect the 7-bit output to the 'ss1' display port
+      .in(valueB[7:4]),   // Connect the 4-bit input to the HIGH 4 bits of 'left'
+      .enable(1'b1)     // Turn the display on
+      ); 
 endmodule
 
 module shift_reg  #(parameter MSB) (  input d,                      // Declare input for data to the first flop in the shift register
