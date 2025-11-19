@@ -22,6 +22,7 @@ module top (
   // Franklin Added
   logic [7:0] valueA, valueB;
 
+// Update Input value A and input Value B
 always_ff @(posedge hz100 or posedge pb[19]) begin
     if (pb[19]) begin
         valueA <= 0;
@@ -33,8 +34,15 @@ always_ff @(posedge hz100 or posedge pb[19]) begin
             valueB <= shift_reg_out;   // save current shift reg to B
     end
 end
-//
- 
+
+
+// Need to add register that implements the operation input
+// Need to add case statement that will assign operation based on input
+  
+  
+  
+  
+ //Tracking change in the input so if held down it doesn't repeat input
   always_ff @(posedge hz100) begin
     if (pb[19]) begin 
     pb0_prev <= 0; 
@@ -52,6 +60,7 @@ end
   logic pb1_sync; 
   logic pulse_1;
 
+
   always_ff @(posedge hz100) begin
     if (pb[20]) begin 
     pb1_prev <= 0; 
@@ -62,7 +71,8 @@ end
     pb1_sync <= pb[1];
     end
   end 
-
+// End of Input tracking
+ 
   assign pulse_1 = (pb1_prev == 0) && (pb1_sync == 1); 
   logic[7:0] shift_reg_out;  
 
@@ -71,9 +81,17 @@ end
 
   assign shift_enable = pulse_0 || pulse_1;
   assign shift_data   = pulse_1;
+  // End of input timing logic
   
-  shift_reg #(.MSB(8)) in (.clk(hz100), .rstn(~pb[19]), .en(shift_enable), .d(shift_data), .dir(pb[2]), .out(shift_reg_out));
-
+  
+  // Call of Shift Register Module
+  shift_reg #(.MSB(8)) in (.clk(hz100), .rstn(~pb[18]), .en(shift_enable), .d(shift_data), .dir(pb[2]), .out(shift_reg_out));
+  //
+  
+  
+  // Note for Future Code-- 
+  //These are for debugging need to implement new output display logic
+  
   // Connects LOW 4 bits (left[3:0]) to display ss0
   ssdec decoder_for_ss0 (
       .out(ss0),        // Connect the 7-bit output to the 'ss0' display port
@@ -112,8 +130,13 @@ end
       .in(valueB[7:4]),   // Connect the 4-bit input to the HIGH 4 bits of 'left'
       .enable(1'b1)     // Turn the display on
       ); 
+      
+      
+  // END OF SSDEC CALLS
 endmodule
 
+
+//SHIFT REG MODULE
 module shift_reg  #(parameter MSB) (  input d,                      // Declare input for data to the first flop in the shift register
                                         input clk,                    // Declare input for clock to all flops in the shift register
                                         input en,                     // Declare input for enable to switch the shift register on/off
@@ -135,7 +158,7 @@ module shift_reg  #(parameter MSB) (  input d,                      // Declare i
       end
 endmodule
 
-
+// SSDEC Module 
 module ssdec(
   input logic [3:0]in,
   input logic enable,
