@@ -1,0 +1,327 @@
+//top.sv
+
+module top (
+  hz100, 
+  reset,
+  pb,
+  left, 
+  right,
+  ss7, 
+  ss6, 
+  ss5, 
+  ss4, 
+  ss3, 
+  ss2, 
+  ss1, 
+  ss0,
+  red, 
+  green, 
+  blue,
+  txdata,
+  rxdata,
+  txclk, 
+  rxclk,
+  txready, 
+  rxready
+);
+
+  input hz100;
+  input reset;
+  input [20:0] pb;
+  output [7:0] left;
+  output [7:0] right;
+  output [7:0] ss7;
+  output [7:0] ss6;
+  output [7:0] ss5;
+  output [7:0] ss4;
+  output [7:0] ss3;
+  output [7:0] ss2;
+  output [7:0] ss1;
+  output [7:0] ss0;
+  output red;
+  output green;
+  output blue;
+  output [7:0] txdata;
+  input [7:0] rxdata;
+  output txclk;
+  output rxclk;
+  input txready;
+  input rxready;
+
+  reg pb0_prev, pb0_sync;
+  reg pb1_prev, pb1_sync;
+  reg equal_prev;
+  reg [7:0] valueA, valueB;
+  reg [15:0] final_output;
+  
+  wire pulse_0, pulse_1;
+  wire equal_pressed;
+  wire [7:0] shift_reg_out;
+  wire [15:0] alu_result;
+  wire [15:0] bcd_A;
+  wire [15:0] bcd_B;
+
+  // Button sync pb[0]
+  always @(posedge hz100) begin
+    if (pb[19]) begin
+      pb0_prev <= 0;
+      pb0_sync <= 0;
+    end else begin
+      pb0_prev <= pb0_sync;
+      pb0_sync <= pb[0];
+    end
+  end
+  assign pulse_0 = (!pb0_prev) && pb0_sync;
+
+  // Button sync pb[1]
+  always @(posedge hz100) begin
+    if (pb[20]) begin
+      pb1_prev <= 0;
+      pb1_sync <= 0;
+    end else begin
+      pb1_prev <= pb1_sync;
+      pb1_sync <= pb[1];
+    end
+  end
+  assign pulse_1 = (!pb1_prev) && pb1_sync;
+
+  // Equal button
+  always @(posedge hz100) begin
+    if (pb[19])
+      equal_prev <= 0;
+    else
+      equal_prev <= pb[16];
+  end
+  assign equal_pressed = pb[16] && (!equal_prev);
+
+  // Shift register
+  shift_reg in (
+    .d(pulse_1),
+    .clk(hz100),
+    .en(pulse_0 || pulse_1),
+    .dir(pb[4]),
+    .rstn(~pb[18]),
+    .out(shift_reg_out)
+  );
+
+  // Value storage
+  always @(posedge hz100 or posedge pb[19]) begin
+    if (pb[19]) begin
+      valueA <= 0;
+      valueB <= 0;
+    end else begin
+      if (pb[10])
+        valueA <= shift_reg_out;
+      if (pb[11])
+        valueB <= shift_reg_out;
+    end
+  end
+
+  // ALU (outputs BCD directly)
+  op_code alu (
+    .valA(valueA),
+    .valB(valueB),
+    .opcode({pb[7], pb[6], pb[3], pb[2]}),
+    .result(alu_result)
+  );
+
+  // Convert valueA to BCD for display
+  op_code bcd_conv_A (
+    .valA(valueA),
+    .valB(8'b0),
+    .opcode(4'b0001),  // Use ADD with 0 to just convert
+    .result(bcd_A)
+  );
+
+  // Convert valueB to BCD for display
+  op_code bcd_conv_B (
+    .valA(valueB),
+    .valB(8'b0),
+    .opcode(4'b0001),  // Use ADD with 0 to just convert
+    .result(bcd_B)
+  );
+
+  // Store result
+  always @(posedge hz100 or posedge pb[19]) begin
+    if (pb[19])
+      final_output <= 0;
+    else if (equal_pressed)
+      final_output <= alu_result;
+  end
+
+  // Display valueA in DECIMAL on ss6 (ones) and ss7 (tens/hundreds)
+  ssdec d6 (.in(bcd_A[3:0]), .enable(1'b1), .out(ss6));
+  ssdec d7 (.in(bcd_A[7:4]), .enable(1'b1), .out(ss7));
+
+  // Display valueB in DECIMAL on ss4 (ones) and ss5 (tens/hundreds)
+  ssdec d4 (.in(bcd_B[3:0]), .enable(1'b1), .out(ss4));
+  ssdec d5 (.in(bcd_B[7:4]), .enable(1'b1), .out(ss5));
+
+  // Display result in DECIMAL on ss0, ss1, ss2, ss3
+  ssdec d0 (.in(final_output[3:0]), .enable(1'b1), .out(ss0));
+  ssdec d1 (.in(final_output[7:4]), .enable(1'b1), .out(ss1));
+  ssdec d2 (.in(final_output[11:8]), .enable(1'b1), .out(ss2));
+  ssdec d3 (.in(final_output[15:12]), .enable(1'b1), .out(ss3));
+
+endmodule
+
+//shift_reg.sv
+
+module shift_reg (
+  d,
+  clk,
+  en,
+  dir,
+  rstn,
+  out
+);
+
+  parameter MSB = 8;
+  
+  input d;
+  input clk;
+  input en;
+  input dir;
+  input rstn;
+  output [MSB-1:0] out;
+
+  reg [MSB-1:0] shift_out;
+
+  always @(posedge clk or negedge rstn) begin
+    if (!rstn)
+      shift_out <= 0;
+    else begin
+      if (en)
+        case (dir)
+          0: shift_out <= {shift_out[MSB-2:0], d};
+          1: shift_out <= {d, shift_out[MSB-1:1]};
+        endcase
+      else
+        shift_out <= shift_out;
+    end
+  end
+
+  assign out = shift_out;
+
+endmodule
+
+//ssdec.sv
+
+module ssdec (
+  in,
+  enable,
+  out
+);
+
+  input [3:0] in;
+  input enable;
+  output [7:0] out;
+  
+  reg [7:0] out;
+
+  always @(*) begin
+    if (enable) begin
+      case(in)
+        4'h0: out = 8'b00111111;
+        4'h1: out = 8'b00000110;
+        4'h2: out = 8'b01011011;
+        4'h3: out = 8'b01001111;
+        4'h4: out = 8'b01100110;
+        4'h5: out = 8'b01101101;
+        4'h6: out = 8'b01111101;
+        4'h7: out = 8'b00000111;
+        4'h8: out = 8'b01111111;
+        4'h9: out = 8'b01100111;
+        4'ha: out = 8'b01110111;
+        4'hb: out = 8'b01111100;
+        4'hc: out = 8'b00111001;
+        4'hd: out = 8'b01011110;
+        4'he: out = 8'b01111001;
+        4'hf: out = 8'b01110001;
+        default: out = 8'b00000000;
+      endcase
+    end else begin
+      out = 8'b00000000;
+    end
+  end
+
+endmodule
+
+//op_code.sv
+
+module op_code (
+  valA,
+  valB,
+  opcode,
+  result
+);
+
+  input [7:0] valA;
+  input [7:0] valB;
+  input [3:0] opcode;
+  output [15:0] result;
+  
+  reg [15:0] result;
+  reg [15:0] a_ext;
+  reg [15:0] b_ext;
+  reg [15:0] mul_result;
+  reg [15:0] binary_result;
+  reg [35:0] shift_reg;
+  integer i;
+  
+  always @(*) begin
+    a_ext = {8'b0, valA};
+    b_ext = {8'b0, valB};
+    
+    // Simple multiplication using nested conditionals
+    mul_result = 0;
+    if (valA[0]) mul_result = mul_result + b_ext;
+    if (valA[1]) mul_result = mul_result + (b_ext << 1);
+    if (valA[2]) mul_result = mul_result + (b_ext << 2);
+    if (valA[3]) mul_result = mul_result + (b_ext << 3);
+    if (valA[4]) mul_result = mul_result + (b_ext << 4);
+    if (valA[5]) mul_result = mul_result + (b_ext << 5);
+    if (valA[6]) mul_result = mul_result + (b_ext << 6);
+    if (valA[7]) mul_result = mul_result + (b_ext << 7);
+    
+    // Calculate binary result first
+    case(opcode)
+      4'b0001: binary_result = a_ext + b_ext;        // ADD
+      4'b0010: binary_result = a_ext - b_ext;        // SUB
+      4'b0011: begin                                 // DIV
+        if (valB != 0)
+          binary_result = a_ext / b_ext;
+        else
+          binary_result = 16'b0;
+      end
+      4'b0100: binary_result = mul_result;           // MUL
+      default: binary_result = 16'b0;
+    endcase
+    
+    // Convert binary to BCD using double dabble algorithm
+    shift_reg = {20'b0, binary_result};
+    
+    for (i = 0; i < 16; i = i + 1) begin
+      if (shift_reg[19:16] >= 5)
+        shift_reg[19:16] = shift_reg[19:16] + 3;
+      if (shift_reg[23:20] >= 5)
+        shift_reg[23:20] = shift_reg[23:20] + 3;
+      if (shift_reg[27:24] >= 5)
+        shift_reg[27:24] = shift_reg[27:24] + 3;
+      if (shift_reg[31:28] >= 5)
+        shift_reg[31:28] = shift_reg[31:28] + 3;
+      if (shift_reg[35:32] >= 5)
+        shift_reg[35:32] = shift_reg[35:32] + 3;
+      
+      shift_reg = shift_reg << 1;
+    end
+    
+    // Output the BCD result (4 digits, 16 bits)
+    // Extract the upper 20 bits after shifting, but only use 16 bits for output
+    result[3:0]   = shift_reg[19:16];   // ones
+    result[7:4]   = shift_reg[23:20];   // tens
+    result[11:8]  = shift_reg[27:24];   // hundreds
+    result[15:12] = shift_reg[31:28];   // thousands
+  end
+  
+endmodule
