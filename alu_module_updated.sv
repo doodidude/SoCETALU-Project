@@ -1,51 +1,21 @@
 //top.sv
-module top (
-  hz100, 
-  reset,
-  pb,
-  left, 
-  right,
-  ss7, 
-  ss6, 
-  ss5, 
-  ss4, 
-  ss3, 
-  ss2, 
-  ss1, 
-  ss0,
-  red, 
-  green, 
-  blue,
-  txdata,
-  rxdata,
-  txclk, 
-  rxclk,
-  txready, 
-  rxready
-);
+`default_nettype none
+// Empty top module
 
-  input hz100;
-  input reset;
-  input [20:0] pb;
-  output [7:0] left;
-  output [7:0] right;
-  output [7:0] ss7;
-  output [7:0] ss6;
-  output [7:0] ss5;
-  output [7:0] ss4;
-  output [7:0] ss3;
-  output [7:0] ss2;
-  output [7:0] ss1;
-  output [7:0] ss0;
-  output red;
-  output green;
-  output blue;
-  output [7:0] txdata;
-  input [7:0] rxdata;
-  output txclk;
-  output rxclk;
-  input txready;
-  input rxready;
+module top (
+  // I/O ports
+  input  logic hz100, reset,
+  input  logic [20:0] pb,
+  output logic [7:0] left, right,
+         ss7, ss6, ss5, ss4, ss3, ss2, ss1, ss0,
+  output logic red, green, blue,
+
+  // UART ports
+  output logic [7:0] txdata,
+  input  logic [7:0] rxdata,
+  output logic txclk, rxclk,
+  input  logic txready, rxready
+);
 
   // Internal signals
   reg pb0_prev, pb0_sync;
